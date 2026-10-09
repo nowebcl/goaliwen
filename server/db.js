@@ -128,12 +128,13 @@ export async function getReservations() {
   try {
     const token = await getPbToken();
     if (token) {
-      const res = await fetch(`${PB_URL}/api/collections/reservations/records?sort=-created&perPage=500`, {
+      const res = await fetch(`${PB_URL}/api/collections/reservations/records?perPage=500`, {
         headers: { Authorization: token },
       });
       if (res.ok) {
         const data = await res.json();
         const list = (data.items || []).map(mapPbReservation);
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         memoryCache.reservations = list;
         return list;
       }
