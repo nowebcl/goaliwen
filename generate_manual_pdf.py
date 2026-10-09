@@ -67,7 +67,7 @@ class NumberedCanvas(canvas.Canvas):
             self.setFont("Helvetica", 8)
             self.setFillColor(COLOR_TEXT_MUTED)
             self.drawString(margin + 105, page_h - 26, "— Manual de Agendamiento y Operación Web")
-            self.drawRightString(page_w - margin, page_h - 26, "www.go.refugioaliwenspa.cl")
+            self.drawRightString(page_w - margin, page_h - 26, "go.refugioaliwenspa.cl")
 
             self.setStrokeColor(COLOR_BORDER_LIGHT)
             self.setLineWidth(0.6)
@@ -225,11 +225,11 @@ def build_manual_pdf(target_path):
             Paragraph("<b>Pasarela de Pagos:</b> Flow.cl Webpay Plus (Producción)", table_cell),
         ],
         [
-            Paragraph("<b>App de Agendamiento:</b> <font color='#1A3826'><u>https://www.go.refugioaliwenspa.cl</u></font>", table_cell),
+            Paragraph("<b>App de Agendamiento:</b> <font color='#1A3826'><u>https://go.refugioaliwenspa.cl/</u></font>", table_cell),
             Paragraph("<b>WhatsApp Oficial:</b> <b>+56 9 9459 7751</b>", table_cell),
         ],
         [
-            Paragraph("<b>Panel Administrativo:</b> <font color='#1A3826'><u>https://www.go.refugioaliwenspa.cl/admin</u></font>", table_cell),
+            Paragraph("<b>Panel Administrativo:</b> <font color='#1A3826'><u>https://go.refugioaliwenspa.cl/admin</u></font>", table_cell),
             Paragraph("<b>Correo Contacto:</b> contacto@refugioaliwenspa.cl", table_cell),
         ],
     ]
@@ -306,7 +306,7 @@ def build_manual_pdf(target_path):
 
     user_steps = [
         ("Paso 1", "Ingreso al Portal Web",
-         "El usuario entra a <b>www.go.refugioaliwenspa.cl</b> desde cualquier celular, tablet o computador con conexión a internet. La plataforma carga al instante."),
+         "El usuario entra a <b>https://go.refugioaliwenspa.cl/</b> desde cualquier celular, tablet o computador con conexión a internet. La plataforma carga al instante."),
 
         ("Paso 2", "Selección de la Cabaña",
          "En la columna izquierda, el usuario revisa el catálogo de cabañas (Copihue, Canelo, Arrayán Deluxe, Roble Andino o Cabaña Test de $350 CLP). Hace clic sobre la que desea reservar y verá destacada su capacidad y valor por noche."),
@@ -392,7 +392,7 @@ def build_manual_pdf(target_path):
 
     admin_steps = [
         ("Acceso al Panel",
-         "Ingresar a <b>https://www.go.refugioaliwenspa.cl/admin</b> (o clic en el enlace <i>'administración →'</i> al pie de la página principal)."),
+         "Ingresar a <b>https://go.refugioaliwenspa.cl/admin</b> (o clic en el enlace <i>'administración →'</i> al pie de la página principal)."),
 
         ("Credenciales de Ingreso",
          "Correo oficial: <b>contacto@refugioaliwenspa.cl</b> junto con la contraseña maestra configurada en el sistema."),
@@ -440,7 +440,7 @@ def build_manual_pdf(target_path):
 
     flow_p = Paragraph(
         "<b>Circuito de Operación de Extremo a Extremo:</b><br/>"
-        "1. <b>El Huésped ingresa</b> a <code>www.go.refugioaliwenspa.cl</code>, elige su cabaña y selecciona sus noches.<br/>"
+        "1. <b>El Huésped ingresa</b> a <code>https://go.refugioaliwenspa.cl/</code>, elige su cabaña y selecciona sus noches.<br/>"
         "2. <b>Flow procesa el abono</b> de forma segura en Webpay Plus y transfiere los fondos a la cuenta comercial del spa.<br/>"
         "3. <b>El sistema bloquea las fechas</b> inmediatamente tanto en la web como en el panel para evitar doble reserva.<br/>"
         "4. <b>El cliente descarga su voucher PDF</b> con el resumen de la estadía y el contacto directo de WhatsApp.<br/>"
@@ -458,7 +458,7 @@ def build_manual_pdf(target_path):
                 "• <b>WhatsApp de Coordinación de Ingreso:</b> +56 9 9459 7751  (9 9459 7751)<br/>"
                 "• <b>Correo Electrónico Oficial:</b> contacto@refugioaliwenspa.cl<br/>"
                 "• <b>Sitio Web Informativo:</b> https://www.refugioaliwenspa.cl<br/>"
-                "• <b>Plataforma de Agendamiento Online:</b> https://www.go.refugioaliwenspa.cl<br/>"
+                "• <b>Plataforma de Agendamiento Online:</b> https://go.refugioaliwenspa.cl/<br/>"
                 "<i>Horarios de atención para recepción y coordinación: Lunes a Domingo de 09:00 a 20:00 hrs.</i>",
                 callout_text
             )
