@@ -230,7 +230,11 @@ def build_manual_pdf(target_path):
         ],
         [
             Paragraph("<b>Panel Administrativo:</b> <font color='#1A3826'><u>https://go.refugioaliwenspa.cl/admin</u></font>", table_cell),
-            Paragraph("<b>Correo Contacto:</b> contacto@refugioaliwenspa.cl", table_cell),
+            Paragraph("<b>Usuario Admin:</b> contacto@refugioaliwenspa.cl", table_cell),
+        ],
+        [
+            Paragraph("<b>Contraseña Maestra:</b> <font color='#1A3826'><b>Aliwen#2026!Spa</b></font>", table_cell),
+            Paragraph("<b>Clave Respaldo:</b> aliwen2026", table_cell),
         ],
     ]
     t_links = Table(links_data, colWidths=[content_width * 0.52, content_width * 0.48])
@@ -392,25 +396,26 @@ def build_manual_pdf(target_path):
 
     admin_steps = [
         ("Acceso al Panel",
-         "Ingresar a <b>https://go.refugioaliwenspa.cl/admin</b> (o clic en el enlace <i>'administración →'</i> al pie de la página principal)."),
+         "Ingresar a <b>https://go.refugioaliwenspa.cl/admin</b> (o enlace <i>'administración →'</i> al pie del sitio)."),
 
-        ("Credenciales de Ingreso",
-         "Correo oficial: <b>contacto@refugioaliwenspa.cl</b> junto con la contraseña maestra configurada en el sistema."),
+        ("Credenciales de Acceso",
+         "Usuario: <b>contacto@refugioaliwenspa.cl</b><br/>"
+         "Contraseña Maestra: <b><font color='#1A3826'>Aliwen#2026!Spa</font></b> (o clave respaldo: <code>aliwen2026</code>)."),
+
+        ("Liberar Fechas al Salir (Check-out)",
+         "Cada reserva incluye el botón <b>'Liberar Fechas (Check-out)'</b>. Al pulsarlo, el estado cambia a <i>liberada</i> y los días quedan disponibles al instante en el calendario para nuevas ventas."),
+
+        ("Alertas en Celular y Computador",
+         "Incluye campana sonora y botón <b>'Activar Alertas Celular/PC'</b> para recibir notificaciones push en tiempo real cada vez que un huésped pague."),
 
         ("Calendario Maestro de Ocupación",
          "Visualización por cabaña de los días ocupados (en color verde oscuro con el nombre del huésped), evitando sobreventas."),
 
-        ("Tabla General de Reservas",
-         "Lista de todas las reservas con su código oficial (<b>#ALW-XXXXX</b>), nombre del huésped, teléfono, fechas de estadía, abono pagado y saldo pendiente al check-in."),
+        ("Tabla y Tarjetas Móviles",
+         "Lista de reservas con código (#ALW-XXXXX), huésped, teléfono, abono pagado, saldo y botón directo de WhatsApp."),
 
-        ("Control y Modificación de Estados",
-         "Selector directo de estado: <b>Confirmada</b>, <b>En proceso</b>, <b>Completada</b> o <b>Cancelada</b> (esta última libera las fechas automáticamente)."),
-
-        ("Bloqueo Manual de Fechas (Mantenimiento)",
-         "Permite bloquear temporalmente días para una cabaña específica ('Mantenimiento tinaja', 'Reparaciones' o 'Reserva telefónica') con opción de liberar con un clic."),
-
-        ("Contacto Rápido vía WhatsApp",
-         "Botón directo junto a cada reserva para abrir chat de WhatsApp con el huésped con un mensaje preconfigurado con sus fechas."),
+        ("Bloqueo Manual de Fechas",
+         "Permite bloquear temporalmente días por mantenimiento de tinajas o reparaciones con opción de liberar con un clic."),
     ]
 
     admin_rows = []
@@ -420,19 +425,19 @@ def build_manual_pdf(target_path):
             Paragraph(desc, table_cell)
         ])
 
-    t_admin = Table(admin_rows, colWidths=[140, content_width - 140])
+    t_admin = Table(admin_rows, colWidths=[145, content_width - 145])
     t_admin.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), COLOR_BG_LIGHT),
         ("BOX", (0, 0), (-1, -1), 0.5, COLOR_BORDER_LIGHT),
         ("INNERGRID", (0, 0), (-1, -1), 0.5, COLOR_BORDER_LIGHT),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
     ]))
     story.append(t_admin)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
     # SECCIÓN 4: CÓMO FUNCIONA LA APP
     story.append(Paragraph("4. Funcionamiento Integral de la Aplicación y Canales de Contacto", h1_style))
@@ -449,16 +454,18 @@ def build_manual_pdf(target_path):
         body_style
     )
     story.append(flow_p)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     contact_box_data = [
         [
             Paragraph(
-                "<b>CANALES DE CONTACTO Y ATENCIÓN OFICIAL — REFUGIO ALIWEN SPA</b><br/>"
-                "• <b>WhatsApp de Coordinación de Ingreso:</b> +56 9 9459 7751  (9 9459 7751)<br/>"
-                "• <b>Correo Electrónico Oficial:</b> contacto@refugioaliwenspa.cl<br/>"
+                "<b>CANALES DE CONTACTO Y ACCESO OFICIAL — REFUGIO ALIWEN SPA</b><br/>"
+                "• <b>Acceso Panel Admin:</b> https://go.refugioaliwenspa.cl/admin<br/>"
+                "• <b>Usuario Administrador:</b> contacto@refugioaliwenspa.cl<br/>"
+                "• <b>Contraseña Maestra:</b> <b>Aliwen#2026!Spa</b>  (clave respaldo: <code>aliwen2026</code>)<br/>"
+                "• <b>WhatsApp de Coordinación:</b> +56 9 9459 7751  (9 9459 7751)<br/>"
                 "• <b>Sitio Web Informativo:</b> https://www.refugioaliwenspa.cl<br/>"
-                "• <b>Plataforma de Agendamiento Online:</b> https://go.refugioaliwenspa.cl/<br/>"
+                "• <b>Plataforma de Reservas Online:</b> https://go.refugioaliwenspa.cl/<br/>"
                 "<i>Horarios de atención para recepción y coordinación: Lunes a Domingo de 09:00 a 20:00 hrs.</i>",
                 callout_text
             )
