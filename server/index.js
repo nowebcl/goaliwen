@@ -73,11 +73,19 @@ function persistPendingReservations() {
 loadPendingReservations();
 
 function getPublicUrl(req) {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL.replace(/\/+$/, '');
-  }
   const host = req.get('host') || `localhost:${PORT}`;
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+
+  // If local development, always use local URL so Flow returns to this running app!
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://${host}`;
+  }
+
+  // Only use APP_URL if explicitly specified and not empty
+  if (process.env.APP_URL && process.env.APP_URL.trim() !== '') {
+    return process.env.APP_URL.replace(/\/+$/, '');
+  }
+
   return `${proto}://${host}`;
 }
 
@@ -268,16 +276,66 @@ app.all('/api/flow/return', async (req, res) => {
       }
 
       // Redirect user to the clean Thank You page
-      return res.redirect(`${clientOrigin}/gracias?code=${encodeURIComponent(commerceOrder)}&token=${encodeURIComponent(token)}`);
+      const targetUrl = `${clientOrigin}/gracias?code=${encodeURIComponent(commerceOrder)}&token=${encodeURIComponent(token)}`;
+      console.log(`[Flow Return] Reservation ${commerceOrder} confirmed. Redirecting browser to: ${targetUrl}`);
+
+      res.status(303);
+      res.setHeader('Location', targetUrl);
+      return res.send(`
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8">
+            <title>Agendamiento Confirmado - Refugio Aliwen Spa</title>
+            <meta http-equiv="refresh" content="0; url=${targetUrl}">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #FAF9F6; color: #1A3826;">
+            <div style="text-align: center; max-width: 440px; padding: 32px; background: white; border-radius: 16px; border: 1px solid #E2ECE5; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+              <h2 style="font-weight: 500; margin-bottom: 8px; color: #1A3826;">¡Pago Confirmado!</h2>
+              <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Redirigiendo a tu agendamiento...</p>
+              <p><a href="${targetUrl}" style="display: inline-block; padding: 10px 20px; background: #1A3826; color: white; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500;">Continuar al comprobante →</a></p>
+            </div>
+            <script>
+              window.location.replace(${JSON.stringify(targetUrl)});
+            </script>
+          </body>
+        </html>
+      `);
     } else {
       // Payment failed or was rejected / cancelled
       console.warn(`[Flow Return] Payment was not successful. Status: ${flowStatus.statusName} (${flowStatus.status})`);
-      return res.redirect(`${clientOrigin}/?payment_status=${encodeURIComponent(flowStatus.statusName)}&code=${encodeURIComponent(commerceOrder)}`);
+      const failUrl = `${clientOrigin}/?payment_status=${encodeURIComponent(flowStatus.statusName)}&code=${encodeURIComponent(commerceOrder)}`;
+      res.status(303);
+      res.setHeader('Location', failUrl);
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="refresh" content="0; url=${failUrl}">
+          </head>
+          <body>
+            <script>window.location.replace(${JSON.stringify(failUrl)});</script>
+          </body>
+        </html>
+      `);
     }
   } catch (err) {
     console.error('[Flow Return] Exception during return handling:', err);
     const publicUrl = getPublicUrl(req);
-    return res.redirect(`${publicUrl}/?payment_status=server_error`);
+    const errorUrl = `${publicUrl}/?payment_status=server_error`;
+    res.status(303);
+    res.setHeader('Location', errorUrl);
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0; url=${errorUrl}">
+        </head>
+        <body>
+          <script>window.location.replace(${JSON.stringify(errorUrl)});</script>
+        </body>
+      </html>
+    `);
   }
 });
 

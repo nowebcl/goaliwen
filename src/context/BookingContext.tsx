@@ -65,9 +65,18 @@ const STORAGE_KEYS = {
 function getInitialRoute(): 'booking' | 'admin' | 'thank-you' {
   if (typeof window === 'undefined') return 'booking';
   const path = window.location.pathname.toLowerCase();
+  const search = window.location.search.toLowerCase();
   const hash = window.location.hash.toLowerCase();
   if (path.includes('/admin') || hash === '#admin') return 'admin';
-  if (path.includes('/gracias') || path.includes('/agradecimiento') || hash.includes('#gracias')) return 'thank-you';
+  if (
+    path.includes('/gracias') ||
+    path.includes('/agradecimiento') ||
+    hash.includes('#gracias') ||
+    search.includes('code=') ||
+    search.includes('order=')
+  ) {
+    return 'thank-you';
+  }
   return 'booking';
 }
 
