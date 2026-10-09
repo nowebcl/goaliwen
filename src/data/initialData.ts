@@ -2,6 +2,19 @@ import type { Cabin, Reservation, BlockedDateRange } from '../types';
 
 export const INITIAL_CABINS: Cabin[] = [
   {
+    id: 'cabana-test-350',
+    name: 'Cabaña Test ($350)',
+    subtitle: 'Prueba de pago real en producción',
+    capacity: 2,
+    pricePerNight: 350,
+    squareMeters: 25,
+    bedConfig: '1 Cama Queen',
+    tinajaIncluded: true,
+    description: 'Cabaña habilitada para probar el servicio y verificar el flujo de agendamiento y pago Flow en producción.',
+    features: ['Tarifa de prueba $350 CLP', 'Pasarela Flow Webpay activa', 'Descarga de comprobante PDF'],
+    images: [],
+  },
+  {
     id: 'copihue-2p',
     name: 'Cabaña Copihue',
     subtitle: 'Tinaja a leña',

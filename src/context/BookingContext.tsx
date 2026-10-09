@@ -21,11 +21,11 @@ interface BookingContextType {
   depositPercentage: PaymentDepositPercentage;
   completedReservation: Reservation | null;
   isAdminAuthenticated: boolean;
-  currentRoute: 'booking' | 'admin';
+  currentRoute: 'booking' | 'admin' | 'thank-you';
   isWebpayModalOpen: boolean;
 
   // Actions
-  navigateTo: (route: 'booking' | 'admin') => void;
+  navigateTo: (route: 'booking' | 'admin' | 'thank-you') => void;
   selectCabin: (cabin: Cabin | null) => void;
   setDates: (checkIn: string, checkOut: string) => void;
   setGuestForm: (form: Partial<GuestFormState>) => void;
@@ -38,7 +38,8 @@ interface BookingContextType {
   isDateOccupied: (cabinId: string, dateStr: string) => boolean;
   isRangeAvailable: (cabinId: string, checkIn: string, checkOut: string) => boolean;
 
-  // Reservation management
+  // Reservation & Flow payment management
+  initiateFlowPayment: () => Promise<{ success: boolean; redirectUrl?: string; error?: string }>;
   processSuccessfulPayment: () => Promise<Reservation>;
   updateReservationStatus: (reservationId: string, status: ReservationStatus) => Promise<void>;
   deleteReservation: (reservationId: string) => Promise<void>;
@@ -61,17 +62,18 @@ const STORAGE_KEYS = {
   ADMIN_TOKEN: 'aliwen_admin_token_v2',
 };
 
-function getInitialRoute(): 'booking' | 'admin' {
+function getInitialRoute(): 'booking' | 'admin' | 'thank-you' {
   if (typeof window === 'undefined') return 'booking';
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
   if (path.includes('/admin') || hash === '#admin') return 'admin';
+  if (path.includes('/gracias') || path.includes('/agradecimiento') || hash.includes('#gracias')) return 'thank-you';
   return 'booking';
 }
 
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cabins] = useState<Cabin[]>(INITIAL_CABINS);
-  const [currentRoute, setCurrentRoute] = useState<'booking' | 'admin'>(getInitialRoute);
+  const [currentRoute, setCurrentRoute] = useState<'booking' | 'admin' | 'thank-you'>(getInitialRoute);
   const [isWebpayModalOpen, setIsWebpayModalOpen] = useState(false);
   const [completedReservation, setCompletedReservation] = useState<Reservation | null>(null);
   const hasLoadedRef = useRef(false);
@@ -159,10 +161,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  const navigateTo = (route: 'booking' | 'admin') => {
+  const navigateTo = (route: 'booking' | 'admin' | 'thank-you') => {
     setCurrentRoute(route);
     if (route === 'admin') {
       window.history.pushState(null, '', '/admin');
+    } else if (route === 'thank-you') {
+      window.history.pushState(null, '', '/gracias');
     } else {
       window.history.pushState(null, '', '/');
     }
@@ -195,6 +199,9 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const selectCabin = (cabin: Cabin | null) => {
     setSelectedCabin(cabin);
+    if (cabin && cabin.pricePerNight === 350) {
+      setDepositPercentage(100);
+    }
   };
 
   const setDates = (newCheckIn: string, newCheckOut: string) => {
@@ -217,7 +224,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: '',
       depositPercentage: 50,
     });
-    setDepositPercentage(50);
+    setDepositPercentage(selectedCabin?.pricePerNight === 350 ? 100 : 50);
   };
 
   const isDateOccupied = (cabinId: string, dateStr: string): boolean => {
@@ -259,13 +266,68 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return true;
   };
 
+  const initiateFlowPayment = async (): Promise<{ success: boolean; redirectUrl?: string; error?: string }> => {
+    if (!selectedCabin) return { success: false, error: 'No hay cabaña seleccionada' };
+    const nights = calculateNights(checkIn, checkOut);
+    if (nights <= 0) return { success: false, error: 'Por favor selecciona las fechas de estadía' };
+
+    const totalPrice = nights * selectedCabin.pricePerNight;
+    const isTestCabin = selectedCabin.pricePerNight === 350;
+    const effectiveDepositPct = isTestCabin ? 100 : depositPercentage;
+    const depositAmount = isTestCabin
+      ? Math.max(350, totalPrice)
+      : Math.round(totalPrice * (effectiveDepositPct / 100));
+    const pendingBalance = Math.max(0, totalPrice - depositAmount);
+
+    const payload = {
+      cabinId: selectedCabin.id,
+      cabinName: selectedCabin.name,
+      checkIn,
+      checkOut,
+      nightsCount: nights,
+      guestsCount: selectedCabin.capacity,
+      guestName: guestForm.fullName.trim() || 'Huésped',
+      guestEmail: guestForm.email.trim() || 'contacto@refugioaliwenspa.cl',
+      guestPhone: guestForm.phone.trim() || '+56 9 9459 7751',
+      guestNotes: guestForm.notes.trim(),
+      pricePerNight: selectedCabin.pricePerNight,
+      totalPrice,
+      depositPercentage: effectiveDepositPct,
+      depositAmount,
+      pendingBalance,
+      clientOrigin: window.location.origin,
+    };
+
+    try {
+      const res = await fetch('/api/flow/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.redirectUrl) {
+        return { success: true, redirectUrl: data.redirectUrl };
+      } else {
+        return { success: false, error: data.error || 'Error al conectar con Flow Webpay' };
+      }
+    } catch (err: any) {
+      console.error('[Flow] Error during initiateFlowPayment:', err);
+      return { success: false, error: err.message || 'Error de conexión con el servidor' };
+    }
+  };
+
   const processSuccessfulPayment = async (): Promise<Reservation> => {
     if (!selectedCabin) throw new Error('No hay cabaña seleccionada');
 
     const nights = calculateNights(checkIn, checkOut);
     const totalPrice = nights * selectedCabin.pricePerNight;
-    const depositAmount = Math.round(totalPrice * (depositPercentage / 100));
-    const pendingBalance = totalPrice - depositAmount;
+    const isTestCabin = selectedCabin.pricePerNight === 350;
+    const effectiveDepositPct = isTestCabin ? 100 : depositPercentage;
+    const depositAmount = isTestCabin
+      ? Math.max(350, totalPrice)
+      : Math.round(totalPrice * (effectiveDepositPct / 100));
+    const pendingBalance = Math.max(0, totalPrice - depositAmount);
 
     const newReservation: Reservation = {
       id: `res-${Date.now()}`,
@@ -273,8 +335,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       cabinId: selectedCabin.id,
       cabinName: selectedCabin.name,
       guestName: guestForm.fullName.trim() || 'Huésped',
-      guestEmail: guestForm.email.trim() || 'contacto@huesped.cl',
-      guestPhone: guestForm.phone.trim() || '+56900000000',
+      guestEmail: guestForm.email.trim() || 'contacto@refugioaliwenspa.cl',
+      guestPhone: guestForm.phone.trim() || '+56 9 9459 7751',
       guestNotes: guestForm.notes.trim(),
       guestsCount: selectedCabin.capacity,
       checkIn,
@@ -282,7 +344,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       nightsCount: nights,
       pricePerNight: selectedCabin.pricePerNight,
       totalPrice,
-      depositPercentage,
+      depositPercentage: effectiveDepositPct,
       depositAmount,
       pendingBalance,
       status: 'confirmada',
@@ -291,10 +353,16 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       transactionId: `TBK-${Date.now().toString().slice(-6)}`,
     };
 
+    // Save to local cache
+    try {
+      localStorage.setItem('aliwen_last_confirmed_reservation', JSON.stringify(newReservation));
+    } catch {}
+
     // Optimistic UI update
     setReservations((prev) => [newReservation, ...prev]);
     setCompletedReservation(newReservation);
     resetBookingDraft();
+    navigateTo('thank-you');
 
     // Persist to server / DB
     try {
@@ -305,7 +373,6 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       if (res.ok) {
         const saved = await res.json();
-        // Update with server confirmed object
         setReservations((prev) => [saved, ...prev.filter((r) => r.id !== newReservation.id)]);
       }
     } catch (err) {
@@ -466,6 +533,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         resetBookingDraft,
         isDateOccupied,
         isRangeAvailable,
+        initiateFlowPayment,
         processSuccessfulPayment,
         updateReservationStatus,
         deleteReservation,

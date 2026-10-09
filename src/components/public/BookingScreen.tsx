@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useBooking } from '../../context/BookingContext';
 import { formatCLP, formatDateShort, calculateNights, addDays } from '../../utils/formatters';
 import { ChevronLeft, ChevronRight, Check, Plus, Minus } from 'lucide-react';
+import { ThankYouScreen } from './ThankYouScreen';
 
 export const BookingScreen: React.FC = () => {
   const {
@@ -19,8 +20,6 @@ export const BookingScreen: React.FC = () => {
     isDateOccupied,
     isRangeAvailable,
     completedReservation,
-    setCompletedReservation,
-    resetBookingDraft,
     navigateTo,
   } = useBooking();
 
@@ -162,9 +161,13 @@ export const BookingScreen: React.FC = () => {
   };
 
   const nights = calculateNights(checkIn, checkOut);
+  const isTestCabin = selectedCabin?.pricePerNight === 350;
+  const effectiveDepositPct = isTestCabin ? 100 : depositPercentage;
   const totalPrice = selectedCabin ? nights * selectedCabin.pricePerNight : 0;
-  const depositAmount = Math.round(totalPrice * (depositPercentage / 100));
-  const pendingBalance = totalPrice - depositAmount;
+  const depositAmount = isTestCabin
+    ? Math.max(350, totalPrice)
+    : Math.round(totalPrice * (effectiveDepositPct / 100));
+  const pendingBalance = Math.max(0, totalPrice - depositAmount);
 
   // Add 1 more night button
   const handleAddNight = () => {
@@ -237,73 +240,9 @@ export const BookingScreen: React.FC = () => {
     />
   );
 
-  // If completed reservation, render minimal confirmation
+  // If completed reservation, render clean Thank You screen without logos
   if (completedReservation) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-[#FCFCFA] text-neutral-900">
-        <div className="w-full max-w-sm border border-[#E2ECE5] bg-white p-6 rounded-xl space-y-4 text-xs shadow-xs">
-          <div className="flex justify-center pb-2">
-            {renderGreenLogo('h-8', 'w-32')}
-          </div>
-
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-            <span className="font-mono font-bold text-sm text-[#1A3826]">#{completedReservation.code}</span>
-            <span className="text-[#1A3826] font-semibold text-[11px] bg-[#EBF2ED] px-2 py-0.5 rounded">
-              Confirmada
-            </span>
-          </div>
-
-          <div className="space-y-1.5 text-neutral-600">
-            <div className="flex justify-between">
-              <span>Cabaña:</span>
-              <span className="font-semibold text-neutral-900">{completedReservation.cabinName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Fechas:</span>
-              <span className="font-semibold text-neutral-900">
-                {formatDateShort(completedReservation.checkIn)} — {formatDateShort(completedReservation.checkOut)} ({completedReservation.nightsCount}n)
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Huésped:</span>
-              <span className="font-semibold text-neutral-900">{completedReservation.guestName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Teléfono:</span>
-              <span className="font-semibold text-neutral-900">{completedReservation.guestPhone}</span>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-neutral-100 space-y-1 text-neutral-600">
-            <div className="flex justify-between">
-              <span>Total estadía:</span>
-              <span className="font-semibold text-neutral-900">{formatCLP(completedReservation.totalPrice)}</span>
-            </div>
-            <div className="flex justify-between text-[#1A3826] font-semibold">
-              <span>Abono pagado ({completedReservation.depositPercentage}%):</span>
-              <span>{formatCLP(completedReservation.depositAmount)}</span>
-            </div>
-            {completedReservation.pendingBalance > 0 && (
-              <div className="flex justify-between text-neutral-500">
-                <span>Saldo en check-in:</span>
-                <span className="font-semibold text-neutral-900">{formatCLP(completedReservation.pendingBalance)}</span>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setCompletedReservation(null);
-              resetBookingDraft();
-            }}
-            className="w-full py-2 bg-[#1A3826] text-white rounded-lg font-medium hover:bg-[#234B34] transition-colors mt-2 cursor-pointer"
-          >
-            Nueva reserva
-          </button>
-        </div>
-      </div>
-    );
+    return <ThankYouScreen />;
   }
 
   return (
@@ -498,24 +437,32 @@ export const BookingScreen: React.FC = () => {
           </div>
 
           {/* Selector de abono */}
-          <div className="pt-0.5">
-            <div className="grid grid-cols-3 gap-1.5">
-              {([30, 50, 100] as const).map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  onClick={() => setDepositPercentage(pct)}
-                  className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                    depositPercentage === pct
-                      ? 'border-[#1A3826] bg-[#1A3826] text-white font-semibold shadow-xs'
-                      : 'border-neutral-200 hover:border-neutral-300 text-neutral-700'
-                  }`}
-                >
-                  {pct}%
-                </button>
-              ))}
+          {isTestCabin ? (
+            <div className="pt-0.5">
+              <div className="py-2 px-3 bg-[#EBF2ED] text-[#1A3826] rounded-lg text-center font-medium text-[11px] border border-[#C5DBCB]">
+                Tarifa de prueba Flow Producción: 100% ({formatCLP(350)})
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="pt-0.5">
+              <div className="grid grid-cols-3 gap-1.5">
+                {([30, 50, 100] as const).map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => setDepositPercentage(pct)}
+                    className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                      depositPercentage === pct
+                        ? 'border-[#1A3826] bg-[#1A3826] text-white font-semibold shadow-xs'
+                        : 'border-neutral-200 hover:border-neutral-300 text-neutral-700'
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Resumen numérico */}
           <div className="pt-2 border-t border-neutral-100 space-y-1 text-neutral-500 font-mono text-[11px]">
@@ -524,10 +471,10 @@ export const BookingScreen: React.FC = () => {
               <span className="text-neutral-900">{formatCLP(totalPrice)}</span>
             </div>
             <div className="flex justify-between text-[#1A3826] font-semibold">
-              <span>Abonar ({depositPercentage}%):</span>
+              <span>Abonar ({effectiveDepositPct}%):</span>
               <span>{formatCLP(depositAmount)}</span>
             </div>
-            {depositPercentage < 100 && (
+            {pendingBalance > 0 && (
               <div className="flex justify-between text-[10px]">
                 <span>Saldo en check-in:</span>
                 <span>{formatCLP(pendingBalance)}</span>
@@ -545,7 +492,7 @@ export const BookingScreen: React.FC = () => {
             type="submit"
             className="w-full py-2.5 bg-[#1A3826] text-white rounded-lg font-semibold hover:bg-[#234B34] transition-colors cursor-pointer text-xs shadow-xs"
           >
-            Pagar con Webpay {depositAmount > 0 ? `(${formatCLP(depositAmount)})` : ''}
+            Pagar con Flow Webpay {depositAmount > 0 ? `(${formatCLP(depositAmount)})` : ''}
           </button>
         </form>
 
