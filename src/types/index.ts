@@ -15,7 +15,7 @@ export interface Cabin {
 
 export type PaymentDepositPercentage = 30 | 50 | 100;
 
-export type ReservationStatus = 'confirmada' | 'en_proceso' | 'completada' | 'cancelada';
+export type ReservationStatus = 'confirmada' | 'en_proceso' | 'completada' | 'liberada' | 'cancelada';
 
 export interface Reservation {
   id: string;

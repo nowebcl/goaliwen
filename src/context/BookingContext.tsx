@@ -47,6 +47,7 @@ interface BookingContextType {
   // Availability / Blocking management
   addBlockedDate: (data: { cabinId: string; cabinName: string; startDate: string; endDate: string; reason: string }) => Promise<void>;
   removeBlockedDate: (blockId: string) => Promise<void>;
+  refreshReservations: () => Promise<void>;
 
   // Auth
   loginAdmin: (passwordOrEmail: string, optionalPassword?: string) => Promise<boolean>;
@@ -56,10 +57,10 @@ interface BookingContextType {
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  RESERVATIONS: 'aliwen_reservations_v2',
-  BLOCKED_DATES: 'aliwen_blocked_dates_v2',
-  ADMIN_AUTH: 'aliwen_admin_auth_v2',
-  ADMIN_TOKEN: 'aliwen_admin_token_v2',
+  RESERVATIONS: 'aliwen_reservations_v3',
+  BLOCKED_DATES: 'aliwen_blocked_dates_v3',
+  ADMIN_AUTH: 'aliwen_admin_auth_v3',
+  ADMIN_TOKEN: 'aliwen_admin_token_v3',
 };
 
 function getInitialRoute(): 'booking' | 'admin' | 'thank-you' {
@@ -114,7 +115,16 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RESERVATIONS);
-      return saved ? JSON.parse(saved) : INITIAL_RESERVATIONS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(
+            (r: any) => !r.id?.startsWith('res-') && r.guestName !== 'Huésped Real en PocketBase'
+          );
+          if (filtered.length > 0) return filtered;
+        }
+      }
+      return INITIAL_RESERVATIONS;
     } catch {
       return INITIAL_RESERVATIONS;
     }
@@ -130,31 +140,30 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
-  // Fetch initial data from API server ONCE on startup
+  // Fetch / refresh data from API server
+  const refreshReservations = async () => {
+    try {
+      const [resRes, resBlock] = await Promise.allSettled([
+        fetch('/api/reservations').then((r) => (r.ok ? r.json() : Promise.reject(r))),
+        fetch('/api/blocked-dates').then((r) => (r.ok ? r.json() : Promise.reject(r))),
+      ]);
+
+      if (resRes.status === 'fulfilled' && Array.isArray(resRes.value)) {
+        setReservations(resRes.value);
+      }
+
+      if (resBlock.status === 'fulfilled' && Array.isArray(resBlock.value)) {
+        setBlockedDates(resBlock.value);
+      }
+    } catch (err) {
+      console.warn('[BookingContext] Loaded from local cache', err);
+    }
+  };
+
   useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
-
-    const loadInitialData = async () => {
-      try {
-        const [resRes, resBlock] = await Promise.allSettled([
-          fetch('/api/reservations').then((r) => (r.ok ? r.json() : Promise.reject(r))),
-          fetch('/api/blocked-dates').then((r) => (r.ok ? r.json() : Promise.reject(r))),
-        ]);
-
-        if (resRes.status === 'fulfilled' && Array.isArray(resRes.value) && resRes.value.length > 0) {
-          setReservations(resRes.value);
-        }
-
-        if (resBlock.status === 'fulfilled' && Array.isArray(resBlock.value)) {
-          setBlockedDates(resBlock.value);
-        }
-      } catch (err) {
-        console.warn('[BookingContext] Loaded from local cache', err);
-      }
-    };
-
-    loadInitialData();
+    refreshReservations();
   }, []);
 
   // Sync URL changes with route state
@@ -240,7 +249,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const target = new Date(dateStr + 'T00:00:00');
 
     const hasReservation = reservations.some((res) => {
-      if (res.cabinId !== cabinId || res.status === 'cancelada') return false;
+      if (res.cabinId !== cabinId) return false;
+      if (res.status === 'cancelada' || res.status === 'liberada' || res.status === 'completada') return false;
       const start = new Date(res.checkIn + 'T00:00:00');
       const end = new Date(res.checkOut + 'T00:00:00');
       return target >= start && target < end;
@@ -548,6 +558,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteReservation,
         addBlockedDate,
         removeBlockedDate,
+        refreshReservations,
         loginAdmin,
         logoutAdmin,
       }}

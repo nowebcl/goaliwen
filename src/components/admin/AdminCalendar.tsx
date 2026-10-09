@@ -92,7 +92,7 @@ export const AdminCalendar: React.FC<AdminCalendarProps> = ({
 
       // Find matching reservations
       const matchingReservations = reservations.filter((r) => {
-        if (r.status === 'cancelada') return false;
+        if (r.status === 'cancelada' || r.status === 'liberada' || r.status === 'completada') return false;
         if (selectedCabinFilter !== 'all' && r.cabinId !== selectedCabinFilter) return false;
         const start = new Date(r.checkIn + 'T00:00:00');
         const end = new Date(r.checkOut + 'T00:00:00');
